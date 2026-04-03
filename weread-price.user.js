@@ -8,6 +8,7 @@
 // @grant        GM_xmlhttpRequest
 // @connect      weread.qq.com
 // @run-at       document-idle
+// @license      MIT
 // ==/UserScript==
 
 'use strict';
