@@ -1,6 +1,7 @@
 // ==UserScript==
 // @name         WeReadPrice
-// @namespace    https://github.com/gaelthas/WeReadPrice
+// @namespace    https://greasyfork.org/zh-CN/scripts/572301-wereadprice
+// @homepage     https://github.com/gaelthas/WeReadPrice
 // @version      1.0.1
 // @description  在微信读书书架页面显示书籍价格
 // @author       WeReadPrice
@@ -8,6 +9,7 @@
 // @grant        GM_xmlhttpRequest
 // @connect      weread.qq.com
 // @run-at       document-idle
+// @license      MIT
 // @updateURL    https://github.com/gaelthas/WeReadPrice/blob/master/weread-price.user.js
 // @downloadURL  https://github.com/gaelthas/WeReadPrice/blob/master/weread-price.user.js
 // ==/UserScript==
