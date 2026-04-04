@@ -1,14 +1,15 @@
 // ==UserScript==
-// @name         微信读书价格助手
-// @namespace    https://weread.qq.com/
-// @version      1.0.0
+// @name         WeReadPrice
+// @namespace    https://github.com/gaelthas/WeReadPrice
+// @version      1.0.1
 // @description  在微信读书书架页面显示书籍价格
 // @author       WeReadPrice
 // @match        https://weread.qq.com/*
 // @grant        GM_xmlhttpRequest
 // @connect      weread.qq.com
 // @run-at       document-idle
-// @license      MIT
+// @updateURL    https://github.com/gaelthas/WeReadPrice/blob/master/weread-price.user.js
+// @downloadURL  https://github.com/gaelthas/WeReadPrice/blob/master/weread-price.user.js
 // ==/UserScript==
 
 'use strict';
@@ -17,7 +18,7 @@
 
 const PRICE_CLASS = 'viberead-price';
 const DEBOUNCE_MS = 300;
-const CACHE_TTL_MS = 1000 * 60; // 1分钟
+const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24h
 const BATCH_SIZE = 5;
 const BATCH_DELAY_MS = 200;
 
