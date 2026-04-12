@@ -10,8 +10,8 @@
 // @connect      weread.qq.com
 // @run-at       document-idle
 // @license      MIT
-// @updateURL    https://github.com/gaelthas/WeReadPrice/blob/master/weread-price.user.js
-// @downloadURL  https://github.com/gaelthas/WeReadPrice/blob/master/weread-price.user.js
+// @updateURL    https://update.greasyfork.org/scripts/572301/WeReadPrice.user.js
+// @downloadURL  https://update.greasyfork.org/scripts/572301/WeReadPrice.user.js
 // ==/UserScript==
 
 'use strict';
