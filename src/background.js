@@ -63,6 +63,7 @@ async function fetchPayInfo(bookId) {
       bookType: data.type,
       centPrice: data.bookInfo?.centPrice ?? data.centPrice ?? null, // 单位：分（API 原始值）
       payingStatus: data.payingStatus,
+      paid: data.paid,
       free: data.free === 1,
     };
   } catch {

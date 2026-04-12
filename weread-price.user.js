@@ -2,7 +2,7 @@
 // @name         WeReadPrice
 // @namespace    https://greasyfork.org/zh-CN/scripts/572301-wereadprice
 // @homepage     https://github.com/gaelthas/WeReadPrice
-// @version      1.0.1
+// @version      1.0.2
 // @description  在微信读书书架页面显示书籍价格
 // @author       WeReadPrice
 // @match        https://weread.qq.com/*
@@ -62,6 +62,7 @@ function fetchPayInfo(bookId) {
             bookType: data.type,
             centPrice: data.bookInfo?.centPrice ?? data.centPrice ?? null,
             payingStatus: data.payingStatus,
+            paid: data.paid,
             free: data.free === 1,
           });
         } catch {
@@ -189,18 +190,21 @@ function injectPriceLabel(card, priceData) {
     'line-height:1.4',
     'pointer-events:none',
   ].join(';');
+  if (!priceData) {
+    return;
+  }
 
-  if (priceData && priceData.bookType == 3) {
+  if (priceData.bookType == 3) {
     label.textContent = '公众号';
-  } else if (priceData && priceData.payingStatus == 1) {
+  } else if (priceData.paid == 1) {
     label.textContent = '已购买';
     label.style.color = '#07c160';
-  } else if (priceData && priceData.payingStatus == 0) {
+  } else if (priceData.payingStatus == 0) {
     label.textContent = '导入';
-  } else if (priceData && priceData.free) {
+  } else if (priceData.free) {
     label.textContent = '免费';
     label.style.color = '#07c160';
-  } else if (priceData && priceData.centPrice != null) {
+  } else if (priceData.centPrice != null) {
     const fen = priceData.centPrice;
     const yuan = fen % 100 === 0 ? String(fen / 100) : (fen / 100).toFixed(2);
     label.textContent = '¥' + yuan;

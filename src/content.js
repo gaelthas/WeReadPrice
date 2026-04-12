@@ -103,18 +103,21 @@ function injectPriceLabel(card, priceData) {
     'line-height:1.4',
     'pointer-events:none',
   ].join(';');
+  if (!priceData) {
+    return;
+  }
 
-  if (priceData && priceData.bookType == 3) {
+  if (priceData.bookType == 3) {
     label.textContent = '公众号';
-  } else if (priceData && priceData.payingStatus == 1) {
+  } else if (priceData.paid == 1) {
     label.textContent = '已购买';
     label.style.color = '#07c160';
-  } else if (priceData && priceData.payingStatus == 0) {
+  } else if (priceData.payingStatus == 0) {
     label.textContent = '导入';
-  } else if (priceData && priceData.free) {
+  } else if (priceData.free) {
     label.textContent = '免费';
     label.style.color = '#07c160';
-  } else if (priceData && priceData.centPrice != null) {
+  } else if (priceData.centPrice != null) {
     // centPrice 字段单位为「分」，来自 weread.qq.com/web/pay/info API 原始返回值
     const fen = priceData.centPrice;
     const yuan = fen % 100 === 0 ? String(fen / 100) : (fen / 100).toFixed(2);
