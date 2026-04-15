@@ -4,7 +4,7 @@
 // @homepage     https://github.com/gaelthas/WeReadPrice
 // @version      1.0.2
 // @description  在微信读书书架页面显示书籍价格
-// @author       WeReadPrice
+// @author       Galois
 // @match        https://weread.qq.com/*
 // @grant        GM_xmlhttpRequest
 // @connect      weread.qq.com
@@ -63,6 +63,8 @@ function fetchPayInfo(bookId) {
             centPrice: data.bookInfo?.centPrice ?? data.centPrice ?? null,
             payingStatus: data.payingStatus,
             paid: data.paid,
+            newRating: data.newRating,
+            category: data.category,
             free: data.free === 1,
           });
         } catch {
@@ -177,6 +179,71 @@ function scanNewCards() {
 
 // ─── 价格注入 ─────────────────────────────────────────────────────────────────
 
+function formatRating(newRating) {
+  if (newRating == null || newRating === '') return '评分 --';
+
+  const num = Number(newRating);
+  if (!Number.isFinite(num)) return '评分 ' + String(newRating);
+
+  const score = num > 10 ? num / 10 : num;
+  const text = score % 1 === 0 ? String(score) : score.toFixed(1);
+  return '评分 ' + text;
+}
+
+function formatCategory(category) {
+  if (!category) return '分类未知';
+
+  if (typeof category === 'string') {
+    return category;
+  }
+
+  if (Array.isArray(category)) {
+    const parts = category.map(item => {
+      if (typeof item === 'string') return item;
+      if (!item || typeof item !== 'object') return '';
+      return item.title || item.name || item.categoryName || item.label || '';
+    }).filter(Boolean);
+
+    return parts.length > 0 ? parts.join(' / ') : '分类未知';
+  }
+
+  if (typeof category === 'object') {
+    return category.title || category.name || category.categoryName || category.label || '分类未知';
+  }
+
+  return '分类未知';
+}
+
+function getPriceDisplay(priceData) {
+  if (!priceData) {
+    return { text: '暂无价格', color: '#888' };
+  }
+
+  if (priceData.bookType == 3) {
+    return { text: '公众号', color: '#888' };
+  }
+
+  if (priceData.paid == 1) {
+    return { text: '已购买', color: '#07c160' };
+  }
+
+  if (priceData.payingStatus == 0) {
+    return { text: '导入', color: '#888' };
+  }
+
+  if (priceData.free) {
+    return { text: '免费', color: '#07c160' };
+  }
+
+  if (priceData.centPrice != null) {
+    const fen = priceData.centPrice;
+    const yuan = fen % 100 === 0 ? String(fen / 100) : (fen / 100).toFixed(2);
+    return { text: '¥' + yuan, color: '#e64340' };
+  }
+
+  return { text: '暂无价格', color: '#888' };
+}
+
 function injectPriceLabel(card, priceData) {
   if (card.querySelector('.' + PRICE_CLASS)) return;
 
@@ -186,33 +253,54 @@ function injectPriceLabel(card, priceData) {
     'font-size:12px',
     'color:#888',
     'margin-top:4px',
-    'text-align:center',
     'line-height:1.4',
     'pointer-events:none',
   ].join(';');
-  if (!priceData) {
-    return;
-  }
 
-  if (priceData.bookType == 3) {
-    label.textContent = '公众号';
-  } else if (priceData.paid == 1) {
-    label.textContent = '已购买';
-    label.style.color = '#07c160';
-  } else if (priceData.payingStatus == 0) {
-    label.textContent = '导入';
-  } else if (priceData.free) {
-    label.textContent = '免费';
-    label.style.color = '#07c160';
-  } else if (priceData.centPrice != null) {
-    const fen = priceData.centPrice;
-    const yuan = fen % 100 === 0 ? String(fen / 100) : (fen / 100).toFixed(2);
-    label.textContent = '¥' + yuan;
-    label.style.color = '#e64340';
-  } else {
-    label.textContent = '暂无价格';
-  }
+  const topRow = document.createElement('div');
+  topRow.style.cssText = [
+    'display:flex',
+    'justify-content:space-between',
+    'align-items:center',
+    'gap:8px',
+  ].join(';');
 
+  const rating = document.createElement('span');
+  rating.textContent = formatRating(priceData && priceData.newRating);
+  rating.style.cssText = [
+    'color:#faad14',
+    'flex:1',
+    'text-align:left',
+    'white-space:nowrap',
+    'overflow:hidden',
+    'text-overflow:ellipsis',
+  ].join(';');
+
+  const price = document.createElement('span');
+  const priceDisplay = getPriceDisplay(priceData);
+  price.textContent = priceDisplay.text;
+  price.style.cssText = [
+    `color:${priceDisplay.color}`,
+    'text-align:right',
+    'white-space:nowrap',
+    'flex-shrink:0',
+  ].join(';');
+
+  const category = document.createElement('div');
+  category.textContent = formatCategory(priceData && priceData.category);
+  category.style.cssText = [
+    'margin-top:2px',
+    'color:#888',
+    'text-align:center',
+    'white-space:nowrap',
+    'overflow:hidden',
+    'text-overflow:ellipsis',
+  ].join(';');
+
+  topRow.appendChild(rating);
+  topRow.appendChild(price);
+  label.appendChild(topRow);
+  label.appendChild(category);
   card.appendChild(label);
 }
 
