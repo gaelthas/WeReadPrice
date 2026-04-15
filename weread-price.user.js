@@ -2,7 +2,7 @@
 // @name         WeReadPrice
 // @namespace    https://greasyfork.org/zh-CN/scripts/572301-wereadprice
 // @homepage     https://github.com/gaelthas/WeReadPrice
-// @version      1.0.2
+// @version      1.0.3
 // @description  在微信读书书架页面显示书籍价格
 // @author       Galois
 // @match        https://weread.qq.com/*
