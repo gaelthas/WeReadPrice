@@ -63,6 +63,7 @@ function fetchPayInfo(bookId) {
             payingStatus: data.payingStatus,
             paid: data.paid,
             newRating: data.newRating,
+            deepVRating: data.deepVRating,
             category: data.category,
             free: data.free === 1,
           });
@@ -178,15 +179,12 @@ function scanNewCards() {
 
 // ─── 价格注入 ─────────────────────────────────────────────────────────────────
 
-function formatRating(newRating) {
-  if (newRating == null || newRating === '') return '评分 --';
-
-  const num = Number(newRating);
-  if (!Number.isFinite(num)) return '评分 ' + String(newRating);
-
+function formatRatingValue(rating) {
+  if (rating == null || rating === '') return null;
+  const num = Number(rating);
+  if (!Number.isFinite(num)) return String(rating);
   const score = num > 10 ? num / 10 : num;
-  const text = score % 1 === 0 ? String(score) : score.toFixed(1);
-  return '评分 ' + text;
+  return score % 1 === 0 ? String(score) : score.toFixed(1);
 }
 
 function formatCategory(category) {
@@ -248,58 +246,40 @@ function injectPriceLabel(card, priceData) {
 
   const label = document.createElement('div');
   label.className = PRICE_CLASS;
-  label.style.cssText = [
-    'font-size:12px',
-    'color:#888',
-    'margin-top:4px',
-    'line-height:1.4',
-    'pointer-events:none',
-  ].join(';');
+  label.style.cssText = 'font-size:12px;margin-top:4px;line-height:1.6;pointer-events:none';
 
-  const topRow = document.createElement('div');
-  topRow.style.cssText = [
-    'display:flex',
-    'justify-content:space-between',
-    'align-items:center',
-    'gap:8px',
-  ].join(';');
-
-  const rating = document.createElement('span');
-  rating.textContent = formatRating(priceData && priceData.newRating);
-  rating.style.cssText = [
-    'color:#faad14',
-    'flex:1',
-    'text-align:left',
-    'white-space:nowrap',
-    'overflow:hidden',
-    'text-overflow:ellipsis',
-  ].join(';');
-
-  const price = document.createElement('span');
   const priceDisplay = getPriceDisplay(priceData);
-  price.textContent = priceDisplay.text;
-  price.style.cssText = [
-    `color:${priceDisplay.color}`,
-    'text-align:right',
-    'white-space:nowrap',
-    'flex-shrink:0',
-  ].join(';');
+  const newRating = formatRatingValue(priceData && priceData.newRating);
+  const deepVRating = formatRatingValue(priceData && priceData.deepVRating);
+  const category = formatCategory(priceData && priceData.category);
 
-  const category = document.createElement('div');
-  category.textContent = formatCategory(priceData && priceData.category);
-  category.style.cssText = [
-    'margin-top:2px',
-    'color:#888',
-    'text-align:center',
-    'white-space:nowrap',
-    'overflow:hidden',
-    'text-overflow:ellipsis',
-  ].join(';');
+  const rowStyle = 'display:flex;justify-content:space-between;align-items:center';
+  const leftStyle = 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0';
+  const rightStyle = 'white-space:nowrap;flex-shrink:0;text-align:right';
 
-  topRow.appendChild(rating);
-  topRow.appendChild(price);
-  label.appendChild(topRow);
-  label.appendChild(category);
+  // Row 1: 评分1 / 评分2 | 价格
+  const row1 = document.createElement('div');
+  row1.style.cssText = rowStyle;
+  const ratingSpan = document.createElement('span');
+  const ratings = [newRating, deepVRating].filter(Boolean);
+  ratingSpan.textContent = ratings.length > 0 ? ratings.join(' / ') : '--';
+  ratingSpan.style.cssText = `color:#faad14;${leftStyle}`;
+  const priceSpan = document.createElement('span');
+  priceSpan.textContent = priceDisplay.text;
+  priceSpan.style.cssText = `color:${priceDisplay.color};${rightStyle}`;
+  row1.appendChild(ratingSpan);
+  row1.appendChild(priceSpan);
+
+  // Row 2: 分类
+  const row2 = document.createElement('div');
+  row2.style.cssText = rowStyle;
+  const catSpan = document.createElement('span');
+  catSpan.textContent = category;
+  catSpan.style.cssText = `color:#888;${leftStyle}`;
+  row2.appendChild(catSpan);
+
+  label.appendChild(row1);
+  label.appendChild(row2);
   card.appendChild(label);
 }
 
