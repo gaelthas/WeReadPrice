@@ -19,7 +19,6 @@
 // ─── 配置 ────────────────────────────────────────────────────────────────────
 
 const PRICE_CLASS = 'viberead-price';
-const DEBOUNCE_MS = 300;
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24h
 const BATCH_SIZE = 5;
 const BATCH_DELAY_MS = 200;
@@ -321,14 +320,29 @@ async function scanAndInject() {
 // ─── MutationObserver ─────────────────────────────────────────────────────────
 
 let _observer = null;
-let _debounceTimer = null;
+let _running = false;
+let _pending = false;
+
+async function _safeScanAndInject() {
+  _pending = false;
+  if (_running) {
+    _pending = true;
+    return;
+  }
+  _running = true;
+  try {
+    await scanAndInject();
+  } finally {
+    _running = false;
+  }
+  if (_pending) _safeScanAndInject();
+}
 
 function startObserver() {
   if (_observer) _observer.disconnect();
 
   _observer = new MutationObserver(() => {
-    clearTimeout(_debounceTimer);
-    _debounceTimer = setTimeout(scanAndInject, DEBOUNCE_MS);
+    _safeScanAndInject();
   });
 
   _observer.observe(document.body, { childList: true, subtree: true });
@@ -339,8 +353,7 @@ function stopObserver() {
     _observer.disconnect();
     _observer = null;
   }
-  clearTimeout(_debounceTimer);
-  _debounceTimer = null;
+  _pending = false;
 }
 
 // ─── 入口 ─────────────────────────────────────────────────────────────────────
