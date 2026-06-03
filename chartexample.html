@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微信读书资产模拟器</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            background-color: #f9f9f9;
+        }
+        .sidebar {
+            width: 320px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            margin-right: 20px;
+        }
+        .main-content {
+            flex-grow: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .control-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+        .stats-panel {
+            margin-top: 30px;
+            padding: 15px;
+            background: #f0f7ff;
+            border-radius: 8px;
+            border-left: 4px solid #1890ff;
+        }
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 15px;
+        }
+        .stat-item:last-child {
+            margin-bottom: 0;
+            font-weight: bold;
+            color: #d9363e;
+        }
+        #chart {
+            width: 100%;
+            height: 600px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h3>策略参数设置</h3>
+        
+        <div class="control-group">
+            <label><span>每周阅读天数</span> <span id="valDays">4 天</span></label>
+            <input type="range" id="inpDays" min="0" max="7" step="1" value="4">
+        </div>
+
+        <div class="control-group">
+            <label><span>每周阅读时长</span> <span id="valHours">3 小时</span></label>
+            <input type="range" id="inpHours" min="0" max="20" step="0.5" value="3">
+        </div>
+
+        <div class="control-group">
+            <label><span>周二翻牌期望</span> <span id="valFlip">3 张</span></label>
+            <input type="range" id="inpFlip" min="0" max="10" step="1" value="3">
+        </div>
+
+        <div class="control-group">
+            <label><span>挑战启动延迟</span> <span id="valDelay">0 天</span></label>
+            <input type="range" id="inpDelay" min="0" max="60" step="1" value="0">
+        </div>
+
+        <div class="stats-panel">
+            <div class="stat-item"><span>90天后会员剩余:</span> <span id="outMembership">0 天</span></div>
+            <div class="stat-item"><span>90天后体验卡剩余:</span> <span id="outCards">0 张</span></div>
+            <div class="stat-item"><span>周期累计花费:</span> <span id="outCost">0 元</span></div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div id="chart"></div>
+    </div>
+
+    <script>
+        // 核心模拟算法 (离散状态机)
+        function simulateWeRead(daysPerWeek, hoursPerWeek, flipExpectation, delayDays) {
+            let membershipDays = 30;
+            let experienceCards = 0;
+            let totalCost = 0;
+            const totalDays = 90;
+            const results = [];
+
+            // 周累计状态
+            let weekDays = 0;
+            let weekHours = 0;
+            let claimedD = { 2: false, 4: false, 7: false };
+            let claimedH = { 0.083: false, 0.5: false, 1: false, 3: false };
+
+            for (let day = 1; day <= totalDays; day++) {
+                let dayOfWeek = day % 7 === 0 ? 7 : day % 7; 
+                const isChallenge = day > delayDays && day <= delayDays + 30;
+
+                // 触发挑战即时与期满奖励
+                if (day === delayDays + 1) {
+                    membershipDays += 2;
+                    totalCost += 5;
+                }
+                if (day === delayDays + 30) {
+                    membershipDays += 30;
+                }
+
+                // 计算当日投入
+                let readsToday = false;
+                let hoursToday = 0;
+                if (isChallenge) {
+                    readsToday = true;
+                    hoursToday = 30 / 29; // 挑战期强制高频满足30小时
+                } else {
+                    readsToday = dayOfWeek <= daysPerWeek;
+                    hoursToday = daysPerWeek > 0 ? hoursPerWeek / daysPerWeek : 0;
+                }
+
+                // 结算打卡阶梯奖励
+                if (readsToday) {
+                    weekDays += 1;
+                    weekHours += hoursToday;
+
+                    if (weekDays >= 2 && !claimedD[2]) { experienceCards += 2; claimedD[2] = true; }
+                    if (weekDays >= 4 && !claimedD[4]) { experienceCards += 2; claimedD[4] = true; }
+                    if (weekDays >= 7 && !claimedD[7]) { experienceCards += 2; claimedD[7] = true; }
+
+                    if (weekHours >= 0.083 && !claimedH[0.083]) { experienceCards += 1; claimedH[0.083] = true; }
+                    if (weekHours >= 0.5 && !claimedH[0.5]) { experienceCards += 1; claimedH[0.5] = true; }
+                    if (weekHours >= 1 && !claimedH[1]) { experienceCards += 1; claimedH[1] = true; }
+                    if (weekHours >= 3 && !claimedH[3]) { experienceCards += 2; claimedH[3] = true; }
+                }
+
+                // 周二翻牌
+                if (dayOfWeek === 2) {
+                    experienceCards += flipExpectation;
+                }
+
+                // 资产消耗与兑换转换
+                if (membershipDays > 0) {
+                    membershipDays -= 1;
+                }
+                
+                // 当日结束时，若会员到期且卡够，自动触发兑换
+                if (membershipDays === 0 && experienceCards >= 60) {
+                    experienceCards -= 60;
+                    membershipDays += 30;
+                    totalCost += 6;
+                }
+
+                // 周末重置周卡槽
+                if (dayOfWeek === 7) {
+                    weekDays = 0;
+                    weekHours = 0;
+                    claimedD = { 2: false, 4: false, 7: false };
+                    claimedH = { 0.083: false, 0.5: false, 1: false, 3: false };
+                }
+
+                results.push({
+                    day: day,
+                    membershipDays: membershipDays,
+                    experienceCards: experienceCards,
+                    totalCost: totalCost
+                });
+            }
+            return results;
+        }
+
+        // 图表初始化
+        const chartDom = document.getElementById('chart');
+        const myChart = echarts.init(chartDom);
+
+        // 视图更新与渲染逻辑
+        function updateSimulation() {
+            // 读取输入
+            const d = parseFloat(document.getElementById('inpDays').value);
+            const h = parseFloat(document.getElementById('inpHours').value);
+            const f = parseFloat(document.getElementById('inpFlip').value);
+            const delay = parseFloat(document.getElementById('inpDelay').value);
+
+            // 更新标签
+            document.getElementById('valDays').innerText = `${d} 天`;
+            document.getElementById('valHours').innerText = `${h} 小时`;
+            document.getElementById('valFlip').innerText = `${f} 张`;
+            document.getElementById('valDelay').innerText = `${delay} 天`;
+
+            // 执行运算
+            const data = simulateWeRead(d, h, f, delay);
+
+            // 更新统计面板
+            const finalState = data[data.length - 1];
+            document.getElementById('outMembership').innerText = `${finalState.membershipDays} 天`;
+            document.getElementById('outCards').innerText = `${finalState.experienceCards} 张`;
+            document.getElementById('outCost').innerText = `${finalState.totalCost} 元`;
+
+            // 拆解数据供 ECharts 使用
+            const xData = data.map(item => `第 ${item.day} 天`);
+            const memData = data.map(item => item.membershipDays);
+            const cardData = data.map(item => item.experienceCards);
+
+            // 设置图表配置 (采用阶梯线展现离散特征)
+            const option = {
+                title: { text: '资产消耗与产出趋势 (90天)' },
+                tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+                legend: { data: ['体验卡余额', '会员剩余天数'] },
+                grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                xAxis: { 
+                    type: 'category', 
+                    boundaryGap: false, 
+                    data: xData,
+                    axisTick: { alignWithLabel: true }
+                },
+                yAxis: [
+                    {
+                        type: 'value',
+                        name: '体验卡',
+                        position: 'left',
+                        axisLine: { show: true, lineStyle: { color: '#5470C6' } }
+                    },
+                    {
+                        type: 'value',
+                        name: '会员天数',
+                        position: 'right',
+                        axisLine: { show: true, lineStyle: { color: '#91CC75' } }
+                    }
+                ],
+                series: [
+                    {
+                        name: '体验卡余额',
+                        type: 'line',
+                        step: 'end', // 关键配置：体现达标瞬间的阶梯状增长
+                        yAxisIndex: 0,
+                        data: cardData,
+                        itemStyle: { color: '#5470C6' },
+                        areaStyle: { opacity: 0.1 }
+                    },
+                    {
+                        name: '会员剩余天数',
+                        type: 'line',
+                        step: 'end', // 每天结束时扣除呈阶梯状
+                        yAxisIndex: 1,
+                        data: memData,
+                        itemStyle: { color: '#91CC75' },
+                        areaStyle: { opacity: 0.1 }
+                    }
+                ]
+            };
+
+            myChart.setOption(option);
+        }
+
+        // 绑定事件监听器
+        document.getElementById('inpDays').addEventListener('input', updateSimulation);
+        document.getElementById('inpHours').addEventListener('input', updateSimulation);
+        document.getElementById('inpFlip').addEventListener('input', updateSimulation);
+        document.getElementById('inpDelay').addEventListener('input', updateSimulation);
+        window.addEventListener('resize', () => myChart.resize());
+
+        // 初始执行
+        updateSimulation();
+    </script>
+</body>
+</html>
