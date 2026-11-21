@@ -2,8 +2,8 @@
 // @name         WeReadPrice
 // @namespace    https://greasyfork.org/zh-CN/scripts/572301-wereadprice
 // @homepage     https://github.com/gaelthas/WeReadPrice
-// @version      1.1.2
-// @description  在微信读书书架页面显示书籍价格，并支持按推荐值/书名/分类/字数/付费情况分组浏览
+// @version      1.1.3
+// @description  在微信读书书架页面显示书籍价格，并支持按推荐值/书名/作者/分类/字数/付费情况分组浏览
 // @author       Galois
 // @match        https://weread.qq.com/*
 // @grant        GM_xmlhttpRequest
@@ -624,6 +624,7 @@ const SORT_TABS = [
   { key: 'default',  label: '默认',     dir: 'asc',  toggle: false },
   { key: 'rating',   label: '推荐值',   dir: 'desc', toggle: true },
   { key: 'title',    label: '书名',     dir: 'asc',  toggle: true },
+  { key: 'author',   label: '作者',     dir: 'asc',  toggle: true },
   { key: 'category', label: '分类',     dir: 'asc',  toggle: true },
   { key: 'words',    label: '字数',     dir: 'desc', toggle: true },
   { key: 'pay',      label: '付费',     dir: 'asc',  toggle: true },
@@ -930,9 +931,17 @@ function mainCategoryOf(category) {
   return main || '未分类';
 }
 
+// 作者分组：合著书只取第一位作者，避免同一作者的书被不同合著组合拆散
+function authorOf(meta) {
+  const text = String(meta?.author || '').trim();
+  if (!text) return '未知作者';
+  return text.split(/[,，、\/／|｜;；]/)[0].trim() || '未知作者';
+}
+
 function groupLabelOf(mode, meta) {
   switch (mode) {
     case 'category': return mainCategoryOf(meta && meta.category);
+    case 'author': return authorOf(meta);
     case 'pay': return payGroupOf(meta);
     case 'rating': return bucketLabel(RATING_BUCKETS, ratingOf(meta));
     case 'words': {
@@ -976,8 +985,11 @@ function buildGroups(items, mode, dir) {
 
   const labels = Array.from(map.keys()).sort((a, b) => compareGroupLabels(mode, a, b));
   if (dir === 'desc') labels.reverse();
-  // 兜底分组（「#」非中文书名、「未分类」）无论正反序都放最后
-  const tailLabel = mode === 'title' ? '#' : (mode === 'category' ? '未分类' : null);
+  // 兜底分组（「#」非中文书名、「未分类」、「未知作者」）无论正反序都放最后
+  const tailLabel = mode === 'title' ? '#'
+    : mode === 'category' ? '未分类'
+    : mode === 'author' ? '未知作者'
+    : null;
   if (tailLabel) {
     const i = labels.indexOf(tailLabel);
     if (i >= 0) { labels.splice(i, 1); labels.push(tailLabel); }
